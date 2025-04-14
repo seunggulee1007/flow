@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: flow
+server:
+  port: 9010
