@@ -43,5 +43,10 @@ public class UserQueueService {
             }).count();
     }
 
+    public Mono<Boolean> isAllowed(final String queue, final Long userId) {
+        return reactiveRedisTemplate.opsForZSet().rank(USER_QUEUE_PROCEED_KEY.formatted(queue), userId.toString())
+            .defaultIfEmpty(-1L)
+            .map(rank -> rank >= 0);
+    }
 
 }
