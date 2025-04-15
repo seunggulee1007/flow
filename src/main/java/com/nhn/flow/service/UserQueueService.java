@@ -1,5 +1,6 @@
 package com.nhn.flow.service;
 
+import com.nhn.flow.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,7 @@ public class UserQueueService {
         return reactiveRedisTemplate.opsForZSet()
             .add(USER_QUEUE_WAIT_KEY.formatted(queue), userId.toString(), unixTimestamp)
             .filter(i -> i)
-            .switchIfEmpty(Mono.error(new Exception("already register user...")))
+            .switchIfEmpty(Mono.error(ErrorCode.QUEUE_ALREADY_REGISTERED_USER.build()))
             .flatMap(i -> reactiveRedisTemplate.opsForZSet().rank(USER_QUEUE_WAIT_KEY.formatted(queue), userId.toString()))
             .map(i -> i >= 0 ? i + 1 : i) // 랭크는 1부터 시작하므로 +1
             ;
