@@ -1,0 +1,38 @@
+<!-- 접속자 대기열 페이지 -->
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>접속자대기열시스템</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            dlsplay: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .message {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+<div class="message">
+    <h1>접속량이 많습니다.</h1>
+    <span>현재 대기 순번</span><span id="number">[[${number}]]</span><span> 입니다. </span>
+    <br/>
+    <p>서버의 접속량이 많아 시간이 걸릴 수 있습니다.</p>
+    <p>잠시만 기다려주세요.</p>
+
+    <br/>
+</div>
+</body>
