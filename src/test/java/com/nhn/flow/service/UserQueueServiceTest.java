@@ -33,6 +33,7 @@ class UserQueueServiceTest {
     }
 
     @Test
+    @DisplayName("유저를 대기열에 등록한다.")
     void registerWaitQueue() {
         StepVerifier.create(userQueueService.registerWaitQueue("default", 100L))
             .expectNext(1L)
@@ -46,7 +47,7 @@ class UserQueueServiceTest {
     }
 
     @Test
-    @DisplayName("")
+    @DisplayName("이미 대기열에 등록되어 있는데 또 등록할 경우 예외가 발생한다.")
     void alreadyRegisterWaitQueue() {
         // given
         StepVerifier.create(userQueueService.registerWaitQueue("default", 100L))
@@ -106,7 +107,7 @@ class UserQueueServiceTest {
     }
 
     @Test
-    @DisplayName("")
+    @DisplayName("진입한 유저가 없을때")
     void allowUserAfterRegisterWaitQueue () {
         // given
         StepVerifier.create(userQueueService.registerWaitQueue("default", 100L)
@@ -124,7 +125,7 @@ class UserQueueServiceTest {
     }
 
     @Test
-    @DisplayName("")
+    @DisplayName("진입이 허용되지 않을때")
     void isNotAllowed () {
         StepVerifier.create(userQueueService.isAllowed("default", 100L))
             .expectNext(false)
@@ -133,7 +134,7 @@ class UserQueueServiceTest {
     }
 
     @Test
-    @DisplayName("")
+    @DisplayName("진입이 허용되지 않을때 2")
     void isNotAllowed2 () {
         StepVerifier.create(userQueueService.registerWaitQueue("default", 100L)
                                 .then(userQueueService.allowUser("default", 3L))
@@ -144,13 +145,35 @@ class UserQueueServiceTest {
     }
 
     @Test
-    @DisplayName("")
+    @DisplayName("진입이 허용 될때")
     void isAllowed () {
         // given
         StepVerifier.create(userQueueService.registerWaitQueue("default", 100L)
                                 .then(userQueueService.allowUser("default", 3L))
                                 .then(userQueueService.isAllowed("default", 100L))
             ).expectNext(true)
+            .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("현재 대기열에서 몇번째인지 확인한다.")
+    void getRank () {
+        // given
+        StepVerifier.create(
+            userQueueService.registerWaitQueue("default", 100L)
+                .then(userQueueService.registerWaitQueue("default", 101L))
+                .then(userQueueService.registerWaitQueue("default", 102L))
+                .then(userQueueService.getRank("default", 100L))
+        ).expectNext(1L)
+            .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("대기열이 비어있을 경우")
+    void emptyRank () {
+        // given
+        StepVerifier.create(userQueueService.getRank("default", 100L))
+            .expectNext(-1L)
             .verifyComplete();
         // when
 
