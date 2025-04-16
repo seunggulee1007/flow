@@ -15,14 +15,29 @@ public class WaitingRoomController {
     private final UserQueueService userQueueService;
 
     @GetMapping("/waiting-room")
-    Mono<Rendering> waitingRoomPage(@RequestParam(name="queue", defaultValue = "default") String queue, @RequestParam(name="user_id", required = false) Long userId) {
-        return userQueueService.registerWaitQueue(queue, userId)
-            .onErrorResume(ex -> userQueueService.getRank(queue, userId))
-            .map(rank -> Rendering.view("waiting-room.html")
-            .modelAttribute("queue", queue)
-                .modelAttribute("userId", userId)
-                .modelAttribute("number", rank)
-                .build()
+    Mono<Rendering> waitingRoomPage(
+                    @RequestParam(name="queue", defaultValue = "default") String queue,
+                    @RequestParam(name="user_id") Long userId,
+                    @RequestParam(name="redirect_url") String redirectUrl) {
+        /**
+         * TODO
+         * 1. 입장이 허용되어 page redirect(이동) 이 가능한 상태인가 ?
+         * 2. 어디로 이동해야 하는가 ?
+         */
+        return userQueueService.isAllowed(queue, userId)
+            .filter(allowed -> allowed)
+            .flatMap(allowed -> Mono.just(Rendering.redirectTo(redirectUrl).build()))
+            .switchIfEmpty(
+
+                userQueueService.registerWaitQueue(queue, userId)
+                    .onErrorResume(ex -> userQueueService.getRank(queue, userId))
+                    .map(rank -> Rendering.view("waiting-room.html")
+                    .modelAttribute("queue", queue)
+                        .modelAttribute("userId", userId)
+                        .modelAttribute("number", rank)
+                        .build()
+                    )
             );
+
     }
 }
