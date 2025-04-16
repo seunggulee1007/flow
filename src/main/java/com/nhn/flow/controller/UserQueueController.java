@@ -1,5 +1,6 @@
 package com.nhn.flow.controller;
 
+import com.nhn.flow.dto.RankNumberResponse;
 import com.nhn.flow.dto.RegisterUserResponse;
 import com.nhn.flow.service.UserQueueService;
 import lombok.RequiredArgsConstructor;
@@ -33,4 +34,12 @@ public class UserQueueController {
                                             @RequestParam(name="user_id") Long userId) {
         return userQueueService.isAllowed(queue, userId).map(AllowedUserResponse::new);
     }
+
+    @GetMapping("/rank")
+    public Mono<RankNumberResponse> getRankUser(@RequestParam(value = "queue", defaultValue = "default") String queue,
+                                                @RequestParam(name="user_id") Long userId) {
+
+        return userQueueService.getRank(queue,  userId).map(RankNumberResponse::new);
+    }
+
 }
