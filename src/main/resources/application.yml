@@ -8,3 +8,11 @@ spring:
 
 server:
   port: 9010
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  data:
+    redis:
+      port: 63790

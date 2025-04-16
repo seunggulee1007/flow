@@ -13,7 +13,7 @@ public class EmbeddedRedis {
     private final RedisServer redisServer;
 
     public EmbeddedRedis() throws IOException {
-        this.redisServer = new RedisServer(63789);
+        this.redisServer = new RedisServer(63790);
     }
 
     @PostConstruct
