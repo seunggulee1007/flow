@@ -32,8 +32,31 @@
     <br/>
     <p>서버의 접속량이 많아 시간이 걸릴 수 있습니다.</p>
     <p>잠시만 기다려주세요.</p>
-
+    <p id="updated"></p>
     <br/>
 </div>
+<script>
+    function fetchWaitingRank() {
+        const queue = '[[${queue}]]';
+        const userId = '[[${userId}]]';
+        const queryParam = new URLSearchParams({queue: queue, user_id: userId});
+        fetch(`/api/v1/queue/rank?${queryParam}`)
+            .then(response => response.json())
+            .then(data => {
+                if(data.rank < 0) {
+                    document.querySelector("#number").innerHTML = 0;
+                    document.querySelector("#updated").innerHTML = new Date();
+                    const newUrl = window.location.origin + window.location.pathname + window.location.search;
+                    window.location.href= newUrl;
+                    return;
+                }
+                document.querySelector("#number").innerHTML = data.rank;
+                document.querySelector("#updated").innerHTML = new Date();
+            })
+            .catch(error => console.log(error));
+    }
+
+    setInterval(fetchWaitingRank, 3000);
+</script>
 </body>
 </html>
