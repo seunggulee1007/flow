@@ -3,6 +3,7 @@ package com.nhn.flow.service;
 import com.nhn.flow.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,6 +23,8 @@ public class UserQueueService {
     private static final String USER_QUEUE_PROCEED_KEY = "user-queue:%s:proceed";
     private static final String USER_QUEUE_WAIT_KEY_FOR_SCAN = "user-queue:*:wait:scan";
     private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
+    @Value("${scheduler.enable}")
+    private boolean scheduling = false;
     // 대기열 등록 API
 
     // 등록과 동시에 랭크가 몇인지 리턴해 준다.
@@ -64,6 +67,10 @@ public class UserQueueService {
 
     @Scheduled(initialDelay = 5000, fixedDelay = 3000)
     public void scheduleAllowUser() {
+        if(!scheduling) {
+            log.info("scheduler is disabled");
+            return;
+        }
         log.info("called scheduleAllowUser");
         // 사용자를 허용하는 메서드 호출
 
