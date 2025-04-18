@@ -75,7 +75,7 @@ public class UserQueueService {
     }
 
     public Mono<String> generateToken(final String queue, final Long userId) {
-        MessageDigest digest = null;
+        MessageDigest digest;
         try {
             digest = MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException e) {

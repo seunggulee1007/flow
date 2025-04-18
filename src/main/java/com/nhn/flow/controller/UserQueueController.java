@@ -47,10 +47,10 @@ public class UserQueueController {
     }
 
     @GetMapping("/touch")
-    Mono<?> touch(@RequestParam(value = "queue", defaultValue = "default") String queue,
+    public Mono<?> touch(@RequestParam(value = "queue", defaultValue = "default") String queue,
                   @RequestParam(name="user_id") Long userId,
                   ServerWebExchange exchange) {
-        Mono.defer(()-> userQueueService.generateToken(queue, userId))
+        return Mono.defer(()-> userQueueService.generateToken(queue, userId))
             .map(token -> {
                 exchange.getResponse().addCookie(
                     ResponseCookie.from("user-queue-%s-token".formatted(queue), token)
@@ -58,8 +58,8 @@ public class UserQueueController {
                         .path("/")
                         .build()
                 );
-            })
-
+                return token;
+            });
     }
 
 }
