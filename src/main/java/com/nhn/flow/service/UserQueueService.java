@@ -2,19 +2,26 @@ package com.nhn.flow.service;
 
 import com.nhn.flow.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.yaml.snakeyaml.util.Tuple;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuples;
 
 import java.time.Instant;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserQueueService {
 
-    public static final String USER_QUEUE_WAIT_KEY = "user-queue:%s:wait";
-    private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
+    private static final String USER_QUEUE_WAIT_KEY = "user-queue:%s:wait";
     private static final String USER_QUEUE_PROCEED_KEY = "user-queue:%s:proceed";
+    private static final String USER_QUEUE_WAIT_KEY_FOR_SCAN = "user-queue:*:wait:scan";
+    private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
     // 대기열 등록 API
 
     // 등록과 동시에 랭크가 몇인지 리턴해 준다.
@@ -55,4 +62,21 @@ public class UserQueueService {
             .map(rank -> rank >= 0 ? rank + 1 : rank);
     }
 
+    @Scheduled(initialDelay = 5000, fixedDelay = 3000)
+    public void scheduleAllowUser() {
+        log.info("called scheduleAllowUser");
+        // 사용자를 허용하는 메서드 호출
+
+        var maxAllowUserCount = 3L;
+        reactiveRedisTemplate.scan(ScanOptions.scanOptions()
+                                       .match(USER_QUEUE_WAIT_KEY_FOR_SCAN)
+                                       .count(100)
+                                       .build())
+            .map(key -> key.split(":")[2])
+            .flatMap(queue -> allowUser(queue, maxAllowUserCount)
+            .map(allow -> Tuples.of(queue, allow))
+            .doOnNext(tuple -> log.info("Triped %d and alowed %d members of %s queue", maxAllowUserCount, tuple.getT2(), tuple.getT1())))
+            .subscribe()
+        ;
+    }
 }
