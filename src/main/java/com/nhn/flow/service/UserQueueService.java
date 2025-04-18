@@ -21,9 +21,9 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class UserQueueService {
 
-    private static final String USER_QUEUE_WAIT_KEY = "user-queue:%s:wait";
-    private static final String USER_QUEUE_PROCEED_KEY = "user-queue:%s:proceed";
-    private static final String USER_QUEUE_WAIT_KEY_FOR_SCAN = "user-queue:*:wait:scan";
+    private static final String USER_QUEUE_WAIT_KEY = "users:queue:%s:wait";
+    private static final String USER_QUEUE_PROCEED_KEY = "users:queue:%s:proceed";
+    private static final String USER_QUEUE_WAIT_KEY_FOR_SCAN = "users:queue:*:wait";
     private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
     @Value("${scheduler.enable}")
     private boolean scheduling = false;
@@ -97,7 +97,6 @@ public class UserQueueService {
             return;
         }
         log.info("called scheduleAllowUser");
-        // 사용자를 허용하는 메서드 호출
 
         var maxAllowUserCount = 3L;
         reactiveRedisTemplate.scan(ScanOptions.scanOptions()
@@ -106,9 +105,8 @@ public class UserQueueService {
                                        .build())
             .map(key -> key.split(":")[2])
             .flatMap(queue -> allowUser(queue, maxAllowUserCount)
-            .map(allow -> Tuples.of(queue, allow))
-            .doOnNext(tuple -> log.info("Triped %d and alowed %d members of %s queue", maxAllowUserCount, tuple.getT2(), tuple.getT1())))
-            .subscribe()
-        ;
+            .map(allow -> Tuples.of(queue, allow)))
+            .doOnNext(tuple -> log.info("Tripped {} and allowed {} members of {} queue", maxAllowUserCount, tuple.getT2(), tuple.getT1()))
+            .subscribe();
     }
 }

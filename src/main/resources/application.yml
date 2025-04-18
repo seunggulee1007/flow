@@ -7,7 +7,7 @@ spring:
       port: 6379
 
 scheduler:
-  enable: false
+  enable: true
 
 
 server:
