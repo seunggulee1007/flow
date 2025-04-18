@@ -8,10 +8,12 @@ import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.yaml.snakeyaml.util.Tuple;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuples;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 
 @Slf4j
@@ -63,6 +65,22 @@ public class UserQueueService {
         return reactiveRedisTemplate.opsForZSet().rank(USER_QUEUE_WAIT_KEY.formatted(queue), userId.toString())
             .defaultIfEmpty(-1L)
             .map(rank -> rank >= 0 ? rank + 1 : rank);
+    }
+
+    public Mono<String> generateToken(final String queue, final Long userId) {
+        MessageDigest digest = null;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        var input = "user-queue-%s-%d".formatted(queue, userId);
+        byte[] encodedHash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+        StringBuilder builder = new StringBuilder();
+        for (byte hash : encodedHash) {
+            builder.append(String.format("%02x", hash));
+        }
+        return Mono.just(builder.toString());
     }
 
     @Scheduled(initialDelay = 5000, fixedDelay = 3000)
