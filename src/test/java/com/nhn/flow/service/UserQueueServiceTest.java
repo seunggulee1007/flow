@@ -175,9 +175,39 @@ class UserQueueServiceTest {
         StepVerifier.create(userQueueService.getRank("default", 100L))
             .expectNext(-1L)
             .verifyComplete();
-        // when
+    }
 
+    @Test
+    @DisplayName("토큰 검증이 안된 경우")
+    void isNotAllowedByToken () {
+        // given
+        String token = "";
+        StepVerifier.create(userQueueService.isAllowedByToken("default", 100L, token))
+            .expectNext(false)
+            .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("토큰 검증이 완료 되었을때")
+    void isAllowedByToken () {
+        // given
+        String token = "d333a5d4eb24f3f5cdd767d79b8c01aad3cd73d3537c70dec430455d37afe4b8";
+        // when
         // then
+        StepVerifier.create(userQueueService.isAllowedByToken("default", 100L, token))
+            .expectNext(true)
+            .verifyComplete();
 
     }
+
+    @Test
+    @DisplayName("토큰 암호화가 제대로 이루어지는지 확인")
+    void generateToken () {
+        // given
+        StepVerifier.create(userQueueService.generateToken("default", 100L))
+            .expectNext("d333a5d4eb24f3f5cdd767d79b8c01aad3cd73d3537c70dec430455d37afe4b8")
+            .verifyComplete();
+
+    }
+
 }
