@@ -10,12 +10,9 @@ jmeter를 이용해 성능을 측정하고, 유저는 30명, 전체 쓰레드가
 ![image](https://github.com/user-attachments/assets/3da0beb5-efef-4744-a308-b04369d3ade8)
 
 ## 결과 요약
-![image](https://github.com/user-attachments/assets/80f29175-a3d9-45aa-bb13-738e1f353cb8)
-
+![image](https://github.com/user-attachments/assets/f5a409b5-1895-41dc-9f39-eec6b9eddaf5)
 ## Response times Over Time
-
-![image](https://github.com/user-attachments/assets/561d6fd6-c408-4cde-8f04-e896fd47a9d2)
-
+![image](https://github.com/user-attachments/assets/80f29175-a3d9-45aa-bb13-738e1f353cb8)
 ## Transaction per second
 ![image](https://github.com/user-attachments/assets/0557f8cf-da08-4791-9e33-57082863c912)
 
