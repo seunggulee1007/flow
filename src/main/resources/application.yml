@@ -8,7 +8,12 @@ spring:
 
 scheduler:
   enable: true
+  max-allow-user-count: 3  # 스케줄러가 한 번에 진입 허용할 최대 사용자 수
 
+queue:
+  max-capacity: 100  # 대기열 최대 용량 (0이면 무제한)
+  token:
+    max-age-seconds: 300  # 토큰 쿠키 만료 시간 (초)
 
 server:
   port: 9010
@@ -23,3 +28,9 @@ spring:
 
 scheduler:
   enable: false
+  max-allow-user-count: 3
+
+queue:
+  max-capacity: 5  # 테스트 환경에서는 용량을 5명으로 제한
+  token:
+    max-age-seconds: 300
