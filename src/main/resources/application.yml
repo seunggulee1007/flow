@@ -12,6 +12,7 @@ scheduler:
 
 queue:
   max-capacity: 100  # 대기열 최대 용량 (0이면 무제한)
+  ttl-seconds: 600  # 대기열 자동 만료 시간 (초, 0이면 만료 없음)
   token:
     max-age-seconds: 300  # 토큰 쿠키 만료 시간 (초)
 
@@ -32,5 +33,6 @@ scheduler:
 
 queue:
   max-capacity: 5  # 테스트 환경에서는 용량을 5명으로 제한
+  ttl-seconds: 3  # 테스트 환경에서는 TTL을 3초로 설정
   token:
     max-age-seconds: 300
