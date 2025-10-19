@@ -24,6 +24,10 @@ public class UserQueueService {
     private static final String USER_QUEUE_WAIT_KEY = "users:queue:%s:wait";
     private static final String USER_QUEUE_PROCEED_KEY = "users:queue:%s:proceed";
     private static final String USER_QUEUE_WAIT_KEY_FOR_SCAN = "users:queue:*:wait";
+    
+    // VIP 우선순위 offset: VIP는 현재 시간에서 이 값을 빼서 항상 앞순위를 가짐
+    private static final long VIP_PRIORITY_OFFSET = 1_000_000_000L; // 약 31년
+    
     private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
     
     @Value("${scheduler.enable}")
@@ -35,24 +39,45 @@ public class UserQueueService {
     @Value("${queue.max-capacity}")
     private Long queueMaxCapacity;
     
+    @Value("${queue.ttl-seconds}")
+    private Long queueTtlSeconds;
+    
     // 대기열 등록 API
 
-    // 등록과 동시에 랭크가 몇인지 리턴해 준다.
+    // 등록과 동시에 랭크가 몇인지 리턴해 준다. (일반 사용자)
     public Mono<Long> registerWaitQueue(final String queue, final Long userId) {
-        log.debug("[Service] 대기열 등록 시작 - queue: {}, userId: {}", queue, userId);
+        return registerWaitQueue(queue, userId, false);
+    }
+
+    // 등록과 동시에 랭크가 몇인지 리턴해 준다. (VIP 여부 지정 가능)
+    public Mono<Long> registerWaitQueue(final String queue, final Long userId, final boolean isVip) {
+        log.debug("[Service] 대기열 등록 시작 - queue: {}, userId: {}, isVip: {}", queue, userId, isVip);
         // 유효성 검증
         return validateQueueName(queue)
             .then(validateUserId(userId))
             .then(checkQueueCapacity(queue))
             .then(Mono.defer(() -> {
                 long unixTimestamp = Instant.now().getEpochSecond();
+                // VIP 사용자는 큰 값을 빼서 더 높은 우선순위 부여
+                long score = isVip ? (unixTimestamp - VIP_PRIORITY_OFFSET) : unixTimestamp;
+                String waitKey = USER_QUEUE_WAIT_KEY.formatted(queue);
+                
                 return reactiveRedisTemplate.opsForZSet()
-                    .add(USER_QUEUE_WAIT_KEY.formatted(queue), userId.toString(), unixTimestamp)
+                    .add(waitKey, userId.toString(), score)
                     .filter(i -> i)
                     .switchIfEmpty(Mono.error(ErrorCode.QUEUE_ALREADY_REGISTERED_USER.build()))
-                    .flatMap(i -> reactiveRedisTemplate.opsForZSet().rank(USER_QUEUE_WAIT_KEY.formatted(queue), userId.toString()))
+                    // TTL 설정 (0보다 크면 설정)
+                    .flatMap(i -> {
+                        if (queueTtlSeconds != null && queueTtlSeconds > 0) {
+                            return reactiveRedisTemplate.expire(waitKey, java.time.Duration.ofSeconds(queueTtlSeconds))
+                                .thenReturn(i);
+                        }
+                        return Mono.just(i);
+                    })
+                    .flatMap(i -> reactiveRedisTemplate.opsForZSet().rank(waitKey, userId.toString()))
                     .map(i -> i >= 0 ? i + 1 : i) // 랭크는 1부터 시작하므로 +1
-                    .doOnSuccess(rank -> log.debug("[Service] 대기열 등록 완료 - queue: {}, userId: {}, rank: {}", queue, userId, rank));
+                    .doOnSuccess(rank -> log.debug("[Service] 대기열 등록 완료 - queue: {}, userId: {}, isVip: {}, rank: {}, TTL: {}초", 
+                        queue, userId, isVip, rank, queueTtlSeconds));
             }));
     }
 
@@ -68,6 +93,13 @@ public class UserQueueService {
         return reactiveRedisTemplate.opsForZSet()
             .size(USER_QUEUE_PROCEED_KEY.formatted(queue))
             .defaultIfEmpty(0L);
+    }
+
+    // 대기열 TTL 조회 (남은 시간, 초 단위)
+    public Mono<Long> getQueueTTL(final String queue) {
+        return reactiveRedisTemplate.getExpire(USER_QUEUE_WAIT_KEY.formatted(queue))
+            .map(duration -> duration != null ? duration.getSeconds() : -1L)
+            .defaultIfEmpty(-1L);
     }
 
     // 유효성 검증 메서드
