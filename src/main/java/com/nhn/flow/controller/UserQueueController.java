@@ -30,11 +30,12 @@ public class UserQueueController {
     @PostMapping
     public Mono<RegisterUserResponse> registerWaitQueue(
                                             @RequestParam(value = "queue", defaultValue = "default") String queue,
-                                            @RequestParam(name="user_id") Long userId) {
-        log.info("[대기열 등록 요청] queue: {}, userId: {}", queue, userId);
-        return userQueueService.registerWaitQueue(queue, userId)
-            .doOnSuccess(rank -> log.info("[대기열 등록 성공] queue: {}, userId: {}, rank: {}", queue, userId, rank))
-            .doOnError(e -> log.error("[대기열 등록 실패] queue: {}, userId: {}, error: {}", queue, userId, e.getMessage()))
+                                            @RequestParam(name="user_id") Long userId,
+                                            @RequestParam(name="is_vip", defaultValue = "false") Boolean isVip) {
+        log.info("[대기열 등록 요청] queue: {}, userId: {}, isVip: {}", queue, userId, isVip);
+        return userQueueService.registerWaitQueue(queue, userId, isVip)
+            .doOnSuccess(rank -> log.info("[대기열 등록 성공] queue: {}, userId: {}, isVip: {}, rank: {}", queue, userId, isVip, rank))
+            .doOnError(e -> log.error("[대기열 등록 실패] queue: {}, userId: {}, isVip: {}, error: {}", queue, userId, isVip, e.getMessage()))
             .map(RegisterUserResponse::new);
     }
 
