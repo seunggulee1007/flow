@@ -341,4 +341,119 @@ class UserQueueServiceTest {
             .verifyComplete();
     }
 
+    // === 대기열 TTL (만료 시간) 테스트 ===
+
+    @Test
+    @DisplayName("대기열 등록 시 자동으로 TTL이 설정된다")
+    void registerWaitQueueWithAutoTTL() throws InterruptedException {
+        // given: 대기열 TTL이 3초로 설정됨
+        // when: 사용자 등록
+        StepVerifier.create(userQueueService.registerWaitQueue("default", 100L))
+            .expectNext(1L)
+            .verifyComplete();
+
+        // then: 대기열에 사용자 존재 확인
+        StepVerifier.create(userQueueService.getWaitQueueSize("default"))
+            .expectNext(1L)
+            .verifyComplete();
+
+        // when: TTL 시간(3초) + 여유(1초) 대기
+        Thread.sleep(4000);
+
+        // then: TTL 만료로 대기열이 비어있음
+        StepVerifier.create(userQueueService.getWaitQueueSize("default"))
+            .expectNext(0L)
+            .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("TTL이 설정된 대기열의 남은 시간을 조회할 수 있다")
+    void getQueueTTL() {
+        // given: 사용자 등록
+        userQueueService.registerWaitQueue("default", 100L).block();
+
+        // when: TTL 조회
+        // then: 양수(남은 시간)가 반환됨
+        StepVerifier.create(userQueueService.getQueueTTL("default"))
+            .expectNextMatches(ttl -> ttl > 0)
+            .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("대기열이 없을 때 TTL 조회 시 -1을 반환한다")
+    void getQueueTTLWhenQueueNotExists() {
+        // given: 대기열이 비어있음
+        // when: TTL 조회
+        // then: -1 반환 (키가 존재하지 않음)
+        StepVerifier.create(userQueueService.getQueueTTL("nonexistent"))
+            .expectNext(-1L)
+            .verifyComplete();
+    }
+
+    // === 우선순위 큐 (VIP) 테스트 ===
+
+    @Test
+    @DisplayName("VIP 사용자는 일반 사용자보다 먼저 진입할 수 있다")
+    void vipUserHasHigherPriority() {
+        // given: 일반 사용자 3명 등록
+        userQueueService.registerWaitQueue("default", 100L, false).block();  // 일반
+        userQueueService.registerWaitQueue("default", 101L, false).block();  // 일반
+        userQueueService.registerWaitQueue("default", 102L, false).block();  // 일반
+
+        // when: VIP 사용자 등록
+        userQueueService.registerWaitQueue("default", 200L, true).block();   // VIP
+
+        // then: VIP 사용자가 1순위
+        StepVerifier.create(userQueueService.getRank("default", 200L))
+            .expectNext(1L)
+            .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("VIP 사용자끼리는 등록 순서대로 순위가 매겨진다")
+    void vipUsersAreOrderedByRegistrationTime() {
+        // given: VIP 사용자 3명 등록
+        userQueueService.registerWaitQueue("default", 200L, true).block();  // VIP
+        userQueueService.registerWaitQueue("default", 201L, true).block();  // VIP
+        userQueueService.registerWaitQueue("default", 202L, true).block();  // VIP
+
+        // when: 순위 조회
+        // then: 등록 순서대로 1, 2, 3순위
+        StepVerifier.create(userQueueService.getRank("default", 200L))
+            .expectNext(1L)
+            .verifyComplete();
+        StepVerifier.create(userQueueService.getRank("default", 201L))
+            .expectNext(2L)
+            .verifyComplete();
+        StepVerifier.create(userQueueService.getRank("default", 202L))
+            .expectNext(3L)
+            .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("진입 허용 시 VIP 사용자가 우선적으로 진입한다")
+    void allowUserPrioritizesVIP() {
+        // given: 일반 사용자 2명, VIP 사용자 2명 등록
+        userQueueService.registerWaitQueue("default", 100L, false).block();  // 일반
+        userQueueService.registerWaitQueue("default", 101L, false).block();  // 일반
+        userQueueService.registerWaitQueue("default", 200L, true).block();   // VIP
+        userQueueService.registerWaitQueue("default", 201L, true).block();   // VIP
+
+        // when: 2명 진입 허용
+        userQueueService.allowUser("default", 2L).block();
+
+        // then: VIP 2명이 진입 허용됨
+        StepVerifier.create(userQueueService.isAllowed("default", 200L))
+            .expectNext(true)
+            .verifyComplete();
+        StepVerifier.create(userQueueService.isAllowed("default", 201L))
+            .expectNext(true)
+            .verifyComplete();
+
+        // 일반 사용자는 아직 대기 중
+        StepVerifier.create(userQueueService.isAllowed("default", 100L))
+            .expectNext(false)
+            .verifyComplete();
+    }
+
 }
