@@ -29,6 +29,8 @@ public class UserQueueService {
     private static final long VIP_PRIORITY_OFFSET = 1_000_000_000L; // 약 31년
     
     private final ReactiveRedisTemplate<String, String> reactiveRedisTemplate;
+    private final QueueHistoryService queueHistoryService;
+    private final QueueNotificationService queueNotificationService;
     
     @Value("${scheduler.enable}")
     private boolean scheduling = false;
@@ -76,6 +78,12 @@ public class UserQueueService {
                     })
                     .flatMap(i -> reactiveRedisTemplate.opsForZSet().rank(waitKey, userId.toString()))
                     .map(i -> i >= 0 ? i + 1 : i) // 랭크는 1부터 시작하므로 +1
+                    .flatMap(rank -> {
+                        // 이력 저장 & 알림 발송
+                        return queueHistoryService.saveHistory(queue, userId, "REGISTER")
+                            .then(queueNotificationService.notifyRegistered(queue, userId, rank))
+                            .thenReturn(rank);
+                    })
                     .doOnSuccess(rank -> log.debug("[Service] 대기열 등록 완료 - queue: {}, userId: {}, isVip: {}, rank: {}, TTL: {}초", 
                         queue, userId, isVip, rank, queueTtlSeconds));
             }));
@@ -153,9 +161,14 @@ public class UserQueueService {
                 return reactiveRedisTemplate.opsForZSet().popMin(USER_QUEUE_WAIT_KEY.formatted(queue), count)
                     .flatMap(member -> {
                         log.debug("[Service] 사용자 진입 허용 중 - queue: {}, userId: {}", queue, member.getValue());
+                        Long allowedUserId = Long.parseLong(member.getValue());
                         // proceed queue에 추가
                         return reactiveRedisTemplate.opsForZSet()
-                            .add(USER_QUEUE_PROCEED_KEY.formatted(queue), member.getValue(), Instant.now().getEpochSecond());
+                            .add(USER_QUEUE_PROCEED_KEY.formatted(queue), member.getValue(), Instant.now().getEpochSecond())
+                            // 이력 저장 & 알림 발송
+                            .flatMap(added -> queueHistoryService.saveHistory(queue, allowedUserId, "ALLOW")
+                                .then(queueNotificationService.notifyAllowed(queue, allowedUserId))
+                                .thenReturn(added));
                     })
                     .count()
                     .doOnSuccess(allowedCount -> log.debug("[Service] 진입 허용 완료 - queue: {}, allowedCount: {}", queue, allowedCount));
