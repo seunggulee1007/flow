@@ -2,9 +2,11 @@ package com.nhn.flow.controller;
 
 import com.nhn.flow.dto.AllowedUserResponse;
 import com.nhn.flow.dto.AllowUserResponse;
+import com.nhn.flow.dto.QueueHistoryResponse;
 import com.nhn.flow.dto.QueueStatisticsResponse;
 import com.nhn.flow.dto.RankNumberResponse;
 import com.nhn.flow.dto.RegisterUserResponse;
+import com.nhn.flow.service.QueueHistoryService;
 import com.nhn.flow.service.UserQueueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -23,6 +26,7 @@ import java.time.Duration;
 public class UserQueueController {
 
     private final UserQueueService userQueueService;
+    private final QueueHistoryService queueHistoryService;
     
     @Value("${queue.token.max-age-seconds}")
     private int tokenMaxAgeSeconds;
@@ -95,6 +99,25 @@ public class UserQueueController {
                 tuple.getT1(),  // waitingCount
                 tuple.getT2()   // allowedCount
             ));
+    }
+
+    @GetMapping("/history")
+    public Flux<QueueHistoryResponse> getUserHistory(
+            @RequestParam(value = "queue", defaultValue = "default") String queue,
+            @RequestParam(name="user_id") Long userId,
+            @RequestParam(name="count", defaultValue = "10") int count) {
+        log.debug("[이력 조회 요청] queue: {}, userId: {}, count: {}", queue, userId, count);
+        return queueHistoryService.getHistoryList(queue, userId, count)
+            .doOnComplete(() -> log.debug("[이력 조회 완료] queue: {}, userId: {}", queue, userId));
+    }
+
+    @GetMapping("/history/all")
+    public Flux<QueueHistoryResponse> getQueueHistory(
+            @RequestParam(value = "queue", defaultValue = "default") String queue,
+            @RequestParam(name="count", defaultValue = "50") int count) {
+        log.debug("[전체 이력 조회 요청] queue: {}, count: {}", queue, count);
+        return queueHistoryService.getQueueHistory(queue, count)
+            .doOnComplete(() -> log.debug("[전체 이력 조회 완료] queue: {}", queue));
     }
 
 }
