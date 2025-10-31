@@ -480,14 +480,6 @@ VIP 사용자 5명 등록 → Rank 1-5
 
 ---
 
-## 📞 연락처
-
-- **이메일**: your.email@example.com
-- **GitHub**: https://github.com/your-username
-- **블로그**: https://your-blog.com
-
----
-
 <div align="center">
 
 **이 프로젝트를 통해 대규모 트래픽 처리, 리액티브 프로그래밍,  
